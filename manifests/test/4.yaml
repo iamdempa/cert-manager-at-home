@@ -1,0 +1,33 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-server
+  namespace: test
+spec:
+  secretName: test-server-tls
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "test-server.test.svc.cluster.local"
+  - "test-server"
+  issuerRef:
+    name: test-ca-issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-client
+  namespace: test
+spec:
+  secretName: test-client-tls
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "test-client.test.svc.cluster.local"
+  - "test-client"
+  issuerRef:
+    name: test-ca-issuer
