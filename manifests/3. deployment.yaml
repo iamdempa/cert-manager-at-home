@@ -43,10 +43,10 @@ metadata:
     # nginx.ingress.kubernetes.io/ssl-redirect: "false"
     # cert-manager.io/issuer: ca-issuer
 spec:
-  # tls:
-  # - hosts:
-  #   - nginx.jananathbanuka.site
-  #   secretName: jananath-self-signed-cert
+  tls:
+  - hosts:
+    - nginx.jananathbanuka.site
+    secretName: jananath-self-signed-cert
   rules:
     - host: nginx.jananathbanuka.site
       http:
