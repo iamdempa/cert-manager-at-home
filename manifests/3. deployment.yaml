@@ -41,7 +41,7 @@ metadata:
   name: nginx-ingress
   namespace: cert-manager
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/rewrite-target: /
     # nginx.ingress.kubernetes.io/ssl-redirect: "false"
     cert-manager.io/cluster-issuer: ca-issuer
 spec:
