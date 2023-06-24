@@ -34,30 +34,30 @@ spec:
       port: 80
       targetPort: 80
   # type: LoadBalancer
-# ---
-# apiVersion: networking.k8s.io/v1
-# kind: Ingress
-# metadata:
-#   name: nginx-ingress
-#   namespace: cert-manager
-#   annotations:
-#     nginx.ingress.kubernetes.io/rewrite-target: /$1
-#     # nginx.ingress.kubernetes.io/ssl-redirect: "false"
-#     cert-manager.io/cluster-issuer: ca-issuer
-# spec:
-#   ingressClassName: "nginx"
-#   tls:
-#   - hosts:
-#     - nginx.jananathbanuka.site
-#     secretName: jananath-self-signed-cert
-#   rules:
-#     - host: nginx.jananathbanuka.site
-#       http:
-#         paths:
-#           - path: /
-#             pathType: Prefix
-#             backend:
-#               service:
-#                 name: nginx
-#                 port:
-#                   number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+  namespace: cert-manager
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: ca-issuer
+spec:
+  ingressClassName: "nginx"
+  tls:
+  - hosts:
+    - nginx.jananathbanuka.site
+    secretName: jananath-self-signed-cert
+  rules:
+    - host: nginx.jananathbanuka.site
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  number: 80
