@@ -45,10 +45,10 @@ metadata:
     cert-manager.io/cluster-issuer: ca-issuer
 spec:
   ingressClassName: "nginx"
-  tls:
-  - hosts:
-    - nginx.jananathbanuka.site
-    secretName: jananath-self-signed-cert
+  # tls:
+  # - hosts:
+  #   - nginx.jananathbanuka.site
+  #   secretName: jananath-self-signed-cert
   rules:
     - host: nginx.jananathbanuka.site
       http:
