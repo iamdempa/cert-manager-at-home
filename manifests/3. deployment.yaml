@@ -37,8 +37,8 @@ kind: Ingress
 metadata:
   name: nginx-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
     cert-manager.io/cluster-issuer: ca-issuer
 spec:
   ingressClassName: "nginx"
