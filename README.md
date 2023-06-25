@@ -9,77 +9,24 @@ I am using an `AWS EC2` instance and `Kubeadm` for installing a one node cluster
 
 Install [Docker](https://docs.docker.com/engine/install/)
 ```
-# Update the apt package index and install packages to allow apt to use a repository over HTTPS
-sudo apt-get update
-sudo apt-get install ca-certificates curl gnupg
-
-# Add Docker’s official GPG key:
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-# Use the following command to set up the repository:
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-# Install Docker engine
-sudo apt-get update
-
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+chmod +x ./prerequisites/docker.sh
+./prerequisites/docker.sh
 ```
 Install [cri-dockerd](https://github.com/Mirantis/cri-dockerd)
 ```
-# First Install golang as this needs to build the cri-docker binary
-wget https://go.dev/dl/go1.20.5.linux-amd64.tar.gz
-
-# untar the ball
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz
-
-# export the path
-export PATH=$PATH:/usr/local/go/bin
-
-# check if installed successfully
-go version
-
-# install make if not available
-apt update && apt install make -y
-
-# Install Cri-Dockerd
-git clone https://github.com/Mirantis/cri-dockerd.git
-cd cri-dockerd
-make cri-dockerd
-mkdir -p /usr/local/bin
-install -o root -g root -m 0755 cri-dockerd /usr/local/bin/cri-dockerd
-install packaging/systemd/* /etc/systemd/system
-sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
-systemctl daemon-reload
-systemctl enable cri-docker.service
-systemctl enable --now cri-docker.socket
+chmod +x ./prerequisites/cri-dockerd.sh
+./prerequisites/cri-dockerd.sh
 ```
 
 ### Install `Kubeadm` and `Network-Plugin` set up the Cluster
 
 Install [Kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)
 ```
-# Update the apt package index and install packages needed to use the Kubernetes apt repository
-sudo apt-get update
-sudo apt-get install -y apt-transport-https ca-certificates curl
-
-# Download the Google Cloud public signing key
-curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
-
-# Add the Kubernetes apt repository
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-
-# Update apt package index, install kubelet, kubeadm and kubectl, and pin their version
-sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
-sudo apt-mark hold kubelet kubeadm kubectl
+chmod +x ./prerequisites/kubeadm.sh
+./prerequisites/kubeadm.sh
 ```
 
-Install [Calico](https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises) - Here we are using Calico as our network addon. You are free to use your own 
+Install [Calico](https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises) - Here we are using Calico as our network addon. You are free to use one on your own 
 
 ```
 curl https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml -O
@@ -124,7 +71,10 @@ spec:
   addresses:
   - 192.168.10.0/24
 
+---
+
 # Announce The Service IPs
+
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
@@ -144,16 +94,19 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 
 # 2. Generate the CA Key and Certificate 
 
+Generate the CA key
 ```bash
 openssl genrsa -out ca.key 4096
 ```
+Create the CA certificate - When you create the CA certificate, provide the information requests on the terminal (Email, Company etc.). Since I am using `nginx.jananathbanuka.site` for my domain name, I am using a wild card `CN` value as `*.jananathbanuka.site`, because I can use any prefixes before `.jananathbanuka.site`
 
 ```bash
 openssl req -new -x509 -sha256 -days 10950 -key ca.key -out ca.crt
 ```
 
-# 2. Create CA secret and `cert-manager` ClusterIssuer/Issuer object
+### 1. Create CA secret and Issuer/ClusterIssuer object
 
+These objects are CRDs deployed from the cert-manager installation
 ```
 apiVersion: v1
 kind: Secret
@@ -161,8 +114,8 @@ metadata:
   name: ca
   namespace: cert-manager
 data:
-  tls.crt: <BASE64-ENCODED-VALUE>
-  tls.key: <BASE64-ENCODED-VALUE>
+  tls.crt: <BASE64-ENCODED-CA-CRT>
+  tls.key: <BASE64-ENCODED-CA-KEY>
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -172,4 +125,89 @@ metadata:
 spec:
   ca:
     secretName: ca
+```
+### 2. Create the `Deployment`, `Service` and an `Ingress` objects
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: ca-issuer
+spec:
+  ingressClassName: "nginx"
+  tls:
+  - hosts:
+    - nginx.jananathbanuka.site
+    secretName: jananath-self-signed-cert
+  rules:
+    - host: nginx.jananathbanuka.site
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  number: 80                 
+```
+
+Once the above objects are created, you can check the ingress resource which now has an IP address handed out by the Metallb
+
+```
+kubectl get ing
+
+NAME            CLASS   HOSTS                       ADDRESS       PORTS     AGE
+nginx-ingress   nginx   nginx.jananathbanuka.site   172.31.88.0   80, 443   23h
+```
+
+# Test
+
+Since we are using a fake domain `nginx.jananathbanuka.site` with a self-signed certificate, in order to access the deployment, add the below entry at `/etc/hosts`. 
+
+Here the IP address `172.31.88.0` is the IP handed out by the Metallb for the deployed Ingress resource above. 
+
+```
+172.31.88.0 nginx.jananathbanuka.site
+```
+
+```
+curl https://nginx.jananathbanuka.site
 ```
